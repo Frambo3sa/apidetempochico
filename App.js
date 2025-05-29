@@ -1,54 +1,89 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TextInput, Button, Alert } from 'react-native';
 import axios from 'axios';
+import { SvgUri } from 'react-native-svg';
 
 export default function App() {
   const [dadosClima, setDadosClima] = useState({});
+  const [cidade, setCidade] = useState('Recife');
+  const [estado, setEstado] = useState('PE');
 
-  useEffect(() => {
-    axios.get('https://cors-anywhere.herokuapp.com/https://api.hgbrasil.com/weather?key=e9966552&city_name=Recife,PE')      .then(response => {
-        setDadosClima(response.data.results);
+  const buscarClima = () => {
+    if (!cidade || !estado) {
+      Alert.alert('Erro', 'Digite cidade e estado!');
+      return;
+    }
+
+    axios.get(`https://cors-anywhere.herokuapp.com/https://api.hgbrasil.com/weather?key=e9966552&city_name=${cidade},${estado}`)
+      .then(response => {
+        setDadosClima(response.data);
       })
       .catch(error => {
         console.error('Erro ao buscar clima:', error);
+        Alert.alert('Erro', 'Não foi possível buscar o clima.');
       });
+  };
+
+  useEffect(() => {
+    buscarClima();
   }, []);
 
+  const { results } = dadosClima;
+
   return (
-    <ScrollView contentContainerStyle={estilos.container}>
-      <View style={estilos.cabecalho}>
-        {dadosClima.condition_slug && (
-          <Image
-  source={{ uri: `https://assets.hgbrasil.com/weather/images/${dadosClima.condition_slug}.png` }}
-  style={estilos.imagem}
-/>
+    <ScrollView contentContainerStyle={styles.container}>
 
+      <View style={styles.areaBusca}>
+        <TextInput
+          style={styles.input}
+          placeholder="Digite a cidade"
+          value={cidade}
+          onChangeText={setCidade}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="UF"
+          value={estado}
+          maxLength={2}
+          onChangeText={setEstado}
+        />
+        <Button title="Buscar" onPress={buscarClima} />
+      </View>
+
+      <View style={styles.cabecalho}>
+        {results?.forecast?.[0]?.condition && (
+          <SvgUri
+            width="150"
+            height="150"
+            uri={`https://cors-anywhere.herokuapp.com/https://assets.hgbrasil.com/weather/icons/conditions/${results.forecast[0].condition}.svg`}
+          />
         )}
-        <Text style={estilos.temperatura}>{dadosClima.temp || '--'}º</Text>
-        <Text style={estilos.textoMenor}>{dadosClima.description || '---'}</Text>
-        <Text style={estilos.textoMenor}>
-          Máx: {dadosClima?.forecast?.[0]?.max || '--'}º  |  Mín: {dadosClima?.forecast?.[0]?.min || '--'}º
+
+        <Text style={styles.temperatura}>{results?.temp || '--'}º</Text>
+        <Text style={styles.textoMenor}>{results?.description || '---'}</Text>
+        <Text style={styles.textoMenor}>
+          Máx: {results?.forecast?.[0]?.max || '--'}º  |  Mín: {results?.forecast?.[0]?.min || '--'}º
         </Text>
       </View>
 
-      <View style={estilos.informacoes}>
+      <View style={styles.informacoes}>
         <Text>
-          Umidade: {dadosClima.humidity || '--'}%   |   Nuvens: {dadosClima.cloudiness || '--'}%   |   Vento: {dadosClima.wind_speedy || '---'}
+          Umidade: {results?.humidity || '--'}%   |   Nuvens: {results?.cloudiness || '--'}%   |   Vento: {results?.wind_speedy || '---'}
         </Text>
       </View>
 
-      <View style={estilos.previsaoHoje}>
-        <Text style={estilos.titulo}>Hoje - {dadosClima.date || '--/--'}</Text>
-        <View style={estilos.linhaPrevisao}>
-          <Text>Nascer: {dadosClima.sunrise || '--:--'}</Text>
-          <Text>Pôr: {dadosClima.sunset || '--:--'}</Text>
-          <Text>Lua: {dadosClima.moon_phase || '---'}</Text>
+      <View style={styles.previsaoHoje}>
+        <Text style={styles.titulo}>Hoje - {results?.date || '--/--'}</Text>
+        <View style={styles.linhaPrevisao}>
+          <Text>Nascer: {results?.sunrise || '--:--'}</Text>
+          <Text>Pôr: {results?.sunset || '--:--'}</Text>
+          <Text>Lua: {results?.moon_phase || '---'}</Text>
         </View>
       </View>
 
-      <View style={estilos.proximaPrevisao}>
-        <Text style={estilos.titulo}>Próxima Previsão</Text>
-        {(dadosClima?.forecast?.slice(1, 3) || []).map((dia, index) => (
+      <View style={styles.proximaPrevisao}>
+        <Text style={styles.titulo}>Próxima Previsão</Text>
+        {results?.forecast?.slice(1, 3).map((dia, index) => (
           <Text key={index}>
             {dia.weekday || '--'} - {dia.description || '--'} - {dia.max || '--'}º / {dia.min || '--'}º
           </Text>
@@ -58,8 +93,7 @@ export default function App() {
   );
 }
 
-
-const estilos = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: '#7ecbff',
@@ -67,13 +101,23 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  areaBusca: {
+    width: '100%',
+    marginBottom: 20,
+    gap: 10,
+    flexDirection: 'row',
+    color: '#7ecbff',
+  },
+  input: {
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
   cabecalho: {
     alignItems: 'center',
     marginBottom: 20,
-  },
-  imagem: {
-    width: 100,
-    height: 100,
   },
   temperatura: {
     fontSize: 50,
